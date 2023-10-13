@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Task;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 
 class TaskController extends Controller
@@ -10,8 +11,20 @@ class TaskController extends Controller
     public function index()
     {
         $tasks = Task::all();
+        $tasks = Task::orderBy('priority')->get();
 
         return view('tasks.index', compact('tasks'));
+    }
+
+    public function getTasks()
+    {
+
+        $lastUpdated = Carbon::createFromTimestamp(date("Y-m-d", time()));
+
+        $tasks = Task::where('updated_at', '>', $lastUpdated)->get();
+        $tasks = Task::orderBy('priority')->get();
+
+        return response()->json(['tasks' => $tasks]);
     }
 
     public function create()
@@ -21,14 +34,26 @@ class TaskController extends Controller
 
     public function store(Request $request)
     {
-        $task = new Task;
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'priority' => 'required|integer|min:1',
+        ]);
 
-        $task->name = $request->name;
-        $task->priority = $request->priority;
+        $existingTask = Task::where('priority', $request->priority)->first();
 
-        $task->save();
+        if ($existingTask) {
+            $newPriority = Task::max('priority') + 1;
+            $request->merge(['priority' => $newPriority]);
 
-        return redirect('/tasks');
+            session()->flash('message', 'A task with the same priority already exists. Task created with a new priority.');
+        }
+
+        Task::create([
+            'name' => $request->name,
+            'priority' => $request->priority,
+        ]);
+
+        return redirect()->route('tasks.index')->with('success', 'Task created successfully.');
     }
 
     public function edit($id)
@@ -58,4 +83,16 @@ class TaskController extends Controller
 
         return redirect('/tasks');
     }
+
+    public function updatePriorities(Request $request)
+    {
+        $taskIds = $request->input('taskIds');
+
+        foreach ($taskIds as $index => $taskId) {
+            Task::where('id', $taskId)->update(['priority' => $index + 1]);
+        }
+
+        return response()->json(['message' => 'Priorities updated successfully']);
+    }
+
 }

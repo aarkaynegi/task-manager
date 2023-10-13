@@ -1,7 +1,6 @@
 <?php
 
-use App\Models\Task;
-use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\TaskController;
 /*
 |--------------------------------------------------------------------------
 | Web Routes
@@ -12,45 +11,16 @@ use Illuminate\Support\Facades\Route;
 | be assigned to the "web" middleware group. Make something great!
 |
  */
+use Illuminate\Support\Facades\Route;
 
-Route::get('/', function () {
-    return view('welcome');
-});
-
-// Create a new task
-Route::post('/tasks', function () {
-    $task = new Task;
-    $task->name = request('name');
-    $task->priority = request('priority');
-    $task->save();
-
-    return redirect('/tasks');
-});
-
-// Edit a task
-Route::put('/tasks/{task}', function (Task $task) {
-    $task->name = request('name');
-    $task->priority = request('priority');
-    $task->save();
-
-    return redirect('/tasks');
-});
-
-// Delete a task
-Route::delete('/tasks/{task}', function (Task $task) {
-    $task->delete();
-
-    return redirect('/tasks');
-});
-
-// Reorder tasks with drag and drop
-Route::put('/tasks/reorder', function () {
-    $tasks = Task::all();
-
-    foreach ($tasks as $task) {
-        $task->priority = request('priority-' . $task->id);
-        $task->save();
-    }
-
-    return redirect('/tasks');
-});
+// Task Routes
+Route::redirect('/', '/tasks');
+Route::resource('tasks', TaskController::class);
+Route::get('/getTasks', [TaskController::class, 'getTasks']);
+Route::get('/tasks', [TaskController::class, 'index'])->name('tasks.index');
+Route::get('/tasks/create', [TaskController::class, 'create'])->name('tasks.create');
+Route::post('/tasks', [TaskController::class, 'store'])->name('tasks.store');
+Route::get('/tasks/{task}/edit', [TaskController::class, 'edit'])->name('tasks.edit');
+Route::put('/tasks/{task}', [TaskController::class, 'update'])->name('tasks.update');
+Route::delete('/tasks/{task}', [TaskController::class, 'destroy'])->name('tasks.destroy');
+Route::post('/update-task-priorities', [TaskController::class, 'updatePriorities']);
